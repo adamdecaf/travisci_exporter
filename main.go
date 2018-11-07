@@ -5,12 +5,14 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"time"
 
+	travis "github.com/kevinburke/travis/lib"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -22,7 +24,8 @@ var (
 
 	// CLI flags
 	flagAddress    = flag.String("address", "0.0.0.0:9099", "HTTP listen address")
-	flagConfigFile = flag.String("config", "", "Path to file with TravisCI token (in TOML)")
+	flagConfigFile = flag.String("config", "~/.travis", "Path to file with TravisCI token (in TOML)")
+	flagName = flag.String("name", "", "TravisCI username or organization")
 	flagInterval   = flag.Duration("interval", defaultInterval, "Interval to check domains at")
 	flagVersion    = flag.Bool("version", false, "Print the rdap_exporter version")
 
@@ -50,9 +53,40 @@ func main() {
 	log.Printf("Starting moov-io/travisci_exporter:%s", version)
 
 	// Sanity checks
-	if *flagConfigFile == "" {
-		log.Fatal("no -config file specified")
+	if *flagConfigFile == "" || *flagName == "" {
+		log.Fatal("-config and -name are required flags")
 	}
+
+	// Setup TravisCI client
+	token, err := travis.GetToken(*flagName)
+	if err != nil {
+		log.Fatal(err)
+	}
+	client := travis.NewClient(token)
+
+	// EXAMPLE
+	req, err := client.NewRequest("GET", "/repo/moov-io%2Fach/builds?branch.name=master", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	req = req.WithContext(context.TODO())
+	builds := make([]*travis.Build, 0)
+	resp := &travis.ListResponse{
+		Data: &builds,
+	}
+	if err := client.Do(req, resp); err != nil {
+		log.Fatal(err)
+	}
+	for i := range builds {
+		b := builds[i]
+		dur, _ := time.ParseDuration(fmt.Sprintf("%ds", b.Duration))
+		log.Printf("ID=%d State=%s Duration=%v Branch=%v", b.ID, b.State, dur, b.Branch.Name)
+		for k := range b.Jobs {
+			fmt.Printf("%#v\n", b.Jobs[k])
+		}
+	}
+	// END EXAMPLE
+
 	check := &checker{
 		// TODO(adam): add travis-ci client
 		interval: *flagInterval,
