@@ -129,7 +129,7 @@ func (c *checker) checkNow() {
 		resp.Body.Close()
 	}
 	if err != nil {
-		log.Printf("ERROR: from travis-ci api: %v", err)
+		log.Printf("ERROR: %s from travis-ci api: %v", c.name, err)
 	}
 	for i := range builds {
 		for k := range builds[i].Jobs {
