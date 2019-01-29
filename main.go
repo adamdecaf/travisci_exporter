@@ -46,16 +46,17 @@ func init() {
 func main() {
 	flag.Parse()
 
+	// Flags that quit after running
 	if *flagVersion {
 		fmt.Println(version)
 		return
 	}
-	log.Printf("Starting moov-io/travisci_exporter:%s", version)
-
-	// Sanity checks
-	if *flagConfigFile == "" || *flagName == "" {
-		log.Fatal("-config and -name are required flags")
+	if *flagName == "" {
+		fmt.Println("-name is required")
+		return
 	}
+
+	log.Printf("Starting travisci_exporter:%s", version)
 
 	// Setup TravisCI client
 	token, err := travis.GetToken(*flagName)
