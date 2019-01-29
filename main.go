@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"time"
+	"strings"
 
 	travis "github.com/kevinburke/travis/lib"
 	"github.com/prometheus/client_golang/prometheus"
@@ -25,7 +26,7 @@ var (
 	// CLI flags
 	flagAddress    = flag.String("address", "0.0.0.0:9099", "HTTP listen address")
 	flagConfigFile = flag.String("config", "~/.travis", "Path to file with TravisCI token (in TOML)")
-	flagName = flag.String("name", "", "TravisCI username or organization")
+	flagNames = flag.String("names", "", "TravisCI usernames or organizations")
 	flagInterval   = flag.Duration("interval", defaultInterval, "Interval to check domains at")
 	flagVersion    = flag.Bool("version", false, "Print the rdap_exporter version")
 
@@ -33,8 +34,8 @@ var (
 	jobDurations = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name: "travisci_job_duration_seconds",
 		Help: "Duration in seconds of each TravisCI job",
-		Buckets: []float64{5.0, 10.0, 20.0, 30.0, 60.0, 300.0, 3000.0},
-	}, []string{"id", "repo"})
+		Buckets: []float64{5.0, 10.0, 20.0, 30.0, 60.0, 300.0, 600.0},
+	}, []string{"id", "slug"})
 )
 
 func init() {
@@ -49,30 +50,34 @@ func main() {
 		fmt.Println(version)
 		return
 	}
-	if *flagName == "" {
-		fmt.Println("-name is required")
+	if *flagNames == "" {
+		fmt.Println("-names is required")
 		return
 	}
 
 	log.Printf("Starting travisci_exporter:%s", version)
 
-	// Setup TravisCI client
-	token, err := travis.GetToken(*flagName)
-	if err != nil {
-		log.Fatal(err)
-	}
-	client := travis.NewClient(token)
+	names := strings.Split(*flagNames, ",")
+	for i := range names {
+		// Setup TravisCI client
+		token, err := travis.GetToken(names[i])
+		if err != nil {
+			log.Fatal(err)
+		}
+		client := travis.NewClient(token)
 
-	check := &checker{
-		client: client,
-		interval: *flagInterval,
+		check := &checker{
+			client: client,
+			interval: *flagInterval,
+		}
+		go check.checkAll()
 	}
-	go check.checkAll()
 
 	// Add Prometheus metrics HTTP handler
 	h := promhttp.HandlerFor(prometheus.DefaultGatherer, promhttp.HandlerOpts{})
 	http.Handle("/metrics", h)
 
+	// Block on HTTP server
 	log.Printf("listenting on %s", *flagAddress)
 	if err := http.ListenAndServe(*flagAddress, nil); err != nil {
 		log.Fatalf("ERROR binding to %s: %v", *flagAddress, err)
