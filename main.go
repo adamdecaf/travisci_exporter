@@ -123,7 +123,7 @@ func (c *checker) checkAll() {
 
 func (c *checker) checkNow() {
 	builds, resp, err := c.client.Builds.List(context.Background(), &travis.BuildsOption{
-		Limit: 100,
+		Limit: 10, // TODO(adam): pagination of all?
 	})
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
