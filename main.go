@@ -29,18 +29,16 @@ var (
 	flagInterval   = flag.Duration("interval", defaultInterval, "Interval to check domains at")
 	flagVersion    = flag.Bool("version", false, "Print the rdap_exporter version")
 
-	// TODO(adam): define metrics
-	// domainExpiration = prometheus.NewGaugeVec(
-	// 	prometheus.GaugeOpts{
-	// 		Name: "domain_expiration",
-	// 		Help: "Days until the RDAP expiration event states this domain will expire",
-	// 	},
-	// 	[]string{"domain"},
-	// )
+	// Prometheus metrics
+	jobDurations = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "travisci_job_duration_seconds",
+		Help: "Duration in seconds of each TravisCI job",
+		Buckets: []float64{5.0, 10.0, 20.0, 30.0, 60.0, 300.0, 3000.0},
+	}, []string{"id", "repo"})
 )
 
 func init() {
-	// prometheus.MustRegister(domainExpiration)
+	prometheus.MustRegister(jobDurations)
 }
 
 func main() {
@@ -65,31 +63,8 @@ func main() {
 	}
 	client := travis.NewClient(token)
 
-	// EXAMPLE
-	req, err := client.NewRequest("GET", "/repo/moov-io%2Fach/builds?branch.name=master", nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	req = req.WithContext(context.TODO())
-	builds := make([]*travis.Build, 0)
-	resp := &travis.ListResponse{
-		Data: &builds,
-	}
-	if err := client.Do(req, resp); err != nil {
-		log.Fatal(err)
-	}
-	for i := range builds {
-		b := builds[i]
-		dur, _ := time.ParseDuration(fmt.Sprintf("%ds", b.Duration))
-		log.Printf("ID=%d State=%s Duration=%v Branch=%v", b.ID, b.State, dur, b.Branch.Name)
-		for k := range b.Jobs {
-			fmt.Printf("%#v\n", b.Jobs[k])
-		}
-	}
-	// END EXAMPLE
-
 	check := &checker{
-		// TODO(adam): add travis-ci client
+		client: client,
 		interval: *flagInterval,
 	}
 	go check.checkAll()
@@ -105,6 +80,8 @@ func main() {
 }
 
 type checker struct {
+	client *travis.Client
+
 	t *time.Ticker
 	interval time.Duration
 }
@@ -112,15 +89,35 @@ type checker struct {
 func (c *checker) checkAll() {
 	if c.t == nil {
 		c.t = time.NewTicker(c.interval)
-		c.checkNow() // check domains right away after ticker setup
+		c.checkNow(c.client) // check domains right away after ticker setup
 	}
 	for range c.t.C {
-		c.checkNow()
+		c.checkNow(c.client)
 	}
 }
 
-func (c *checker) checkNow() {
-	log.Println("checking...")
+func (c *checker) checkNow(client *travis.Client) {
+	req, err := client.NewRequest("GET", "/repo/moov-io%2Fach/builds?branch.name=master", nil)
+	if err != nil {
+		log.Printf("ERROR: checkNow: %v", err)
+	}
+	req = req.WithContext(context.TODO())
+
+	builds := make([]*travis.Build, 0)
+	resp := &travis.ListResponse{
+		Data: &builds,
+	}
+	if err := client.Do(req, resp); err != nil {
+		log.Printf("ERROR: checkNow: %v", err)
+	}
+
+	for i := range builds {
+		dur, _ := time.ParseDuration(fmt.Sprintf("%ds", builds[i].Duration))
+		for k := range builds[i].Jobs {
+			id := fmt.Sprintf("%d", builds[i].Jobs[k].ID)
+			jobDurations.WithLabelValues(id, builds[i].Repository.Slug).Observe(dur.Seconds())
+		}
+	}
 }
 
 // func readDomainFile(where string) ([]string, error) {
