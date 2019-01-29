@@ -1,4 +1,4 @@
-// Copyright 2018 The Moov Authors
+// Copyright 2019 Adam Shannon
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
@@ -77,8 +77,13 @@ func main() {
 
 	for i := range config.Organizations {
 		org := config.Organizations[i]
-		client := travis.NewClient(travis.ApiOrgUrl, org.Token)
 
+		var client *travis.Client
+		if org.UseOrg {
+			client = travis.NewClient(travis.ApiOrgUrl, org.Token)
+		} else {
+			client = travis.NewClient(travis.ApiComUrl, org.Token)
+		}
 		check := &checker{
 			name:     org.Name,
 			client:   client,

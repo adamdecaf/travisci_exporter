@@ -11,4 +11,6 @@ type Config struct {
 type Organization struct {
 	Name  string `yaml:"name"`
 	Token string `yaml:"token"`
+
+	UseOrg bool `yaml:"org",omitempty`
 }
