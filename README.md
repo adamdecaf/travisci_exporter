@@ -24,7 +24,7 @@ $ docker run adamdecaf/travisci_exporter:0.2.0 -config.file config.toml
 
 ### Configuration
 
-travisci_exporter reads a YAML config file like the following:
+travisci_exporter reads a YAML config file like the following, but you'll need to [download an API token](https://travis-ci.com/account/preferences).
 
 ```yaml
 organizations:
