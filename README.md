@@ -18,7 +18,7 @@ You can download and run the latest docker image [`adamdecaf/travisci_exporter`]
 Then you can run the Docker image:
 
 ```
-$ docker run adamdecaf/travisci_exporter:latest -config config.toml
+$ docker run adamdecaf/travisci_exporter:latest -config.file config.toml
 ```
 
 ### Configuration
