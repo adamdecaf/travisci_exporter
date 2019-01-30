@@ -1,6 +1,6 @@
 ## travisci_exporter
 
-[![Build Status](https://travis-ci.org/adamdecaf/travisci_exporter.svg?branch=master)](https://travis-ci.org/adamdecaf/travisci_exporter)
+[![Build Status](https://travis-ci.com/adamdecaf/travisci_exporter.svg?branch=master)](https://travis-ci.com/adamdecaf/travisci_exporter)
 [![Go Report Card](https://goreportcard.com/badge/github.com/adamdecaf/travisci_exporter)](https://goreportcard.com/report/github.com/adamdecaf/travisci_exporter)
 [![Support via Flattr](https://button.flattr.com/flattr-badge-large.png)](https://flattr.com/@adamdecaf)
 
