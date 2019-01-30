@@ -10,7 +10,7 @@ Prometheus exporter for [TravisCI](https://travis-ci.com/) builds and jobs. Usef
 
 | Metric Name | Type | Description |
 |----|-----|-----|
-| `travisci_job_duration_seconds` | Histogram | Histogram of job durations. Buckets: 5s, 10s, 20s, 30s, 60s, 5min, 10min |
+| `travisci_job_duration_seconds` | Gauge | Duration of jobs in seconds. |
 
 ### Install / Usage
 
