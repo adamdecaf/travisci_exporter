@@ -55,7 +55,7 @@ func main() {
 	log.Printf("Starting travisci_exporter:%s", version)
 
 	// Read our config file
-	var config *Config
+	var config *config
 	if *flagConfigFile == "" {
 		log.Fatalf("-config.file is empty")
 	} else {

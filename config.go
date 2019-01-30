@@ -4,11 +4,11 @@
 
 package main
 
-type Config struct {
-	Organizations []Organization `yaml:"organizations"`
+type config struct {
+	Organizations []organization `yaml:"organizations"`
 }
 
-type Organization struct {
+type organization struct {
 	Name  string `yaml:"name"`
 	Token string `yaml:"token"`
 
