@@ -12,5 +12,5 @@ type Organization struct {
 	Name  string `yaml:"name"`
 	Token string `yaml:"token"`
 
-	UseOrg bool `yaml:"org",omitempty`
+	UseOrg bool `yaml:"org,omitempty"`
 }
