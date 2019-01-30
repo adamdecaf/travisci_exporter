@@ -28,7 +28,7 @@ var (
 
 	// CLI flags
 	flagAddress    = flag.String("address", "0.0.0.0:9099", "HTTP listen address")
-	flagConfigFile = flag.String("config.file", "config.yaml", "Path to file with TravisCI token (in TOML)")
+	flagConfigFile = flag.String("config.file", "", "Path to file with TravisCI token (in TOML)")
 	flagInterval   = flag.Duration("interval", defaultInterval, "Interval to check domains at")
 	flagVersion    = flag.Bool("version", false, "Print the rdap_exporter version")
 
@@ -57,15 +57,7 @@ func main() {
 	// Read our config file
 	var config *Config
 	if *flagConfigFile == "" {
-		log.Println("-config.file is empty so using example config")
-		config = &Config{
-			Organizations: []Organization{
-				{
-					Name:  "adamdecaf",
-					Token: "",
-				},
-			},
-		}
+		log.Fatalf("-config.file is empty")
 	} else {
 		bs, err := ioutil.ReadFile(*flagConfigFile)
 		if err != nil {
