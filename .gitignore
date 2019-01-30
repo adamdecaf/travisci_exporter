@@ -1,2 +1,4 @@
+/bin/
+
 *.yaml
 ~/testdata/*.yaml
