@@ -24,6 +24,8 @@ const version = "0.1.1-dev"
 var (
 	defaultInterval, _ = time.ParseDuration("1m")
 
+	timestampFormat = "2006-01-02T15:04:05Z"
+
 	// CLI flags
 	flagAddress    = flag.String("address", "0.0.0.0:9099", "HTTP listen address")
 	flagConfigFile = flag.String("config.file", "config.yaml", "Path to file with TravisCI token (in TOML)")
@@ -31,10 +33,9 @@ var (
 	flagVersion    = flag.Bool("version", false, "Print the rdap_exporter version")
 
 	// Prometheus metrics
-	jobDurations = prometheus.NewHistogramVec(prometheus.HistogramOpts{
-		Name:    "travisci_job_duration_seconds",
-		Help:    "Duration in seconds of each TravisCI job",
-		Buckets: []float64{5.0, 10.0, 20.0, 30.0, 60.0, 300.0, 600.0},
+	jobDurations = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "travisci_job_duration_seconds",
+		Help: "Duration in seconds of each TravisCI job",
 	}, []string{"id", "slug"})
 )
 
@@ -133,7 +134,27 @@ func (c *checker) checkNow() {
 	}
 	for i := range builds {
 		for k := range builds[i].Jobs {
-			jobDurations.WithLabelValues(fmt.Sprintf("%d", builds[i].Jobs[k].Id), builds[i].Repository.Slug).Observe(float64(builds[i].Duration))
+			job, resp, err := c.client.Jobs.Find(context.Background(), builds[i].Jobs[k].Id)
+			if resp != nil && resp.Body != nil {
+				resp.Body.Close()
+			}
+			if err != nil {
+				continue
+			}
+			if job.FinishedAt == "" {
+				continue // can't measure job duration if it's not finished
+			}
+
+			start, err := time.Parse(timestampFormat, job.StartedAt)
+			if err != nil {
+				continue
+			}
+			end, err := time.Parse(timestampFormat, job.FinishedAt)
+			if err != nil {
+				continue
+			}
+
+			jobDurations.WithLabelValues(fmt.Sprintf("%d", builds[i].Jobs[k].Id), builds[i].Repository.Slug).Set(float64(end.Sub(start).Seconds()))
 		}
 	}
 }
