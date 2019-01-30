@@ -1,0 +1,47 @@
+language: go
+sudo: false
+
+matrix:
+  allow_failures:
+    - go: 1.12beta2
+  include:
+    - os: linux
+      go: 1.11.x
+      cache:
+        directories:
+          - "/home/travis/.cache/go-build" # GOCACHE
+    - os: linux
+      go: 1.12beta2
+    - os: osx
+      go: 1.11.x
+      cache:
+        directories:
+          - "/Users/travis/Library/Caches/go-build" # GOCACHE
+env:
+  matrix:
+    - GO111MODULE=auto
+
+before_install:
+  - go get -u github.com/client9/misspell/cmd/misspell
+  - go get -u golang.org/x/lint/golint
+  - go get github.com/fzipp/gocyclo
+  - go get honnef.co/go/tools/cmd/staticcheck
+  - go get golang.org/x/tools/cmd/cover
+  # Install gcc, from https://travis-ci.community/t/go-cant-find-gcc-with-go1-11-1-on-windows/293/5
+  - if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then choco install -y mingw; export PATH=/c/tools/mingw64/bin:"$PATH"; fi
+
+before_script:
+  - GOFILES=$(find . -type f -name '*.go' | grep -v vendor)
+
+script:
+  # Just check gofmt on linux, it's the fastest builder
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then test -z $(gofmt -s -l $GOFILES); fi
+  - go test ./... -race -coverprofile=coverage.txt -covermode=atomic
+  - misspell -error -locale US $GOFILES
+  - gocyclo -over 26 $GOFILES
+  - golint -set_exit_status $GOFILES
+  - staticcheck ./...
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
+  - make docker
